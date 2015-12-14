@@ -64,7 +64,7 @@ function flatten(t)
     return torch.view(t, -1) -- :storage() exposes a raw memory interface
 end
 
--- a function to do memory optimizations by 
+-- a function to do memory optimizations by
 -- setting up double-buffering across the network.
 -- this drastically reduces the memory needed to generate samples.
 -- from soumith/dcgan.torch
@@ -88,7 +88,8 @@ end
 
 
 function Style2Vec(cnn, gram, img, desired_layer)
-    --[[ runs img through cnn, saving the output tensor at each of style_layers
+    --[[
+       runs img through cnn, saving the output tensor at each of style_layers
 
     -- FOR NOW, only returns relu4_1
 
@@ -108,12 +109,12 @@ function Style2Vec(cnn, gram, img, desired_layer)
     relu5_2 : FloatTensor - size: 512x512
     relu5_3 : FloatTensor - size: 512x512
     relu5_4 : FloatTensor - size: 512x512
-    
-    Returns a Lua table with the above key-value pairs. 
 
-    
-    --]]
-    
+    Returns a Lua table with the above key-value pairs.
+
+
+    --]]--
+
     local next_style_idx = 1
     local net = nn.Sequential()
     local style_vec = {}
@@ -127,14 +128,14 @@ function Style2Vec(cnn, gram, img, desired_layer)
     --     local layer_name = layer.name
     --     if (layer_name == desired_layer) then
     --         local gram = GramMatrix():float()
-    --         if params.gpu >= 0 then gram = gram:cuda() end 
+    --         if params.gpu >= 0 then gram = gram:cuda() end
     --         cnn:forward(img)
     --         cnn:get(i).output
 
 
 
     -- Build up net from cnn
-    
+
     for i = 1, #cnn do
 
         if next_style_idx <= #style_layers then
@@ -144,21 +145,21 @@ function Style2Vec(cnn, gram, img, desired_layer)
             if params.gpu >= 0 then layer = layer:cuda() end
 
             net:add(layer)
-            
+
             -- now to grab style layers
-            
+
             if (layer_name == desired_layer) then
                 local target_features = net:forward(img)
 
                 local target_i = gram:forward(target_features)
                 target_i:div(target_features:nElement())
-                
+
                 -- hack to do only one layer instead of all of them
 
                 gram = nil
                 net = nil
                 collectgarbage(); collectgarbage()
-                return flatten(target_i):totable() --:totable() might be causing problems
+                return flatten(target_i):float():totable()
 
                 -- original code below
 
@@ -166,7 +167,7 @@ function Style2Vec(cnn, gram, img, desired_layer)
                 -- next_style_idx = next_style_idx + 1
 
                 -- end hack
-     
+
             end
         end
     end
@@ -183,7 +184,7 @@ function load_json(filename, file)
 end
 
 
-function save_json(filename, file)        
+function save_json(filename, file)
     local json_string = cjson.encode(file)
     torch.save(params.tmp_dir .. filename .. '.json', json_string, 'ascii')
 
@@ -225,8 +226,8 @@ end
 style_images = {}
 sorted = {}
 
-for f in paths.iterfiles(params.style_dir) do    
-    if string.match(f, '.jpg') then
+for f in paths.iterfiles(params.style_dir) do
+    if string.match(f, '.png') then
 
         -- print('processing ' .. f)
 
@@ -234,7 +235,7 @@ for f in paths.iterfiles(params.style_dir) do
         img = preprocess(img):float()
 
         if params.gpu >= 0 then img = img:cuda() end
-        label = string.split(f, '.jpg')[1]
+        label = string.split(f, '.png')[1]
 
         table.insert(sorted, label)
         style_images[label] = img
@@ -253,9 +254,9 @@ print(collectgarbage('count'))
 
 local cnn = loadcaffe_wrap.load(params.proto_file, params.model_file, params.backend):float()
 local gram = GramMatrix():float()
-if params.gpu >= 0 then 
+if params.gpu >= 0 then
     cnn = cnn:cuda()
-    gram = gram:cuda() 
+    gram = gram:cuda()
 end
 optimizeInferenceMemory(cnn)
 
@@ -275,8 +276,8 @@ i = params.start_at
 while (i < #sorted) do
     label = sorted[i]
 
-    io.write(ct .. ' ' .. label .. ':\t')        --      .. params.style_layers .. ' ...' 
-    
+    io.write(ct .. ' ' .. label .. ':\t')        --      .. params.style_layers .. ' ...'
+
     local image = style_images[label]
     local vec = Style2Vec(cnn, gram, image, 'relu4_1')
     vec = cjson.encode(vec)
@@ -285,9 +286,9 @@ while (i < #sorted) do
 
     -- Let's try saving each vector individually, as opposed to L243 (+13)
     torch.save(params.tmp_dir .. label .. '.json', vec, 'ascii')
-    
+
     io.write(' Done!\n')
-    
+
     ct = ct + 1
     if ct > params.iter then break end
     collectgarbage(); collectgarbage()
@@ -297,22 +298,22 @@ while (i < #sorted) do
 end
 
 -- for i, label in ipairs(sorted) do
---     io.write(label .. ':\t')        --      .. params.style_layers .. ' ...' 
-    
+--     io.write(label .. ':\t')        --      .. params.style_layers .. ' ...'
+
 --     local image = style_images[label]
 --     local vec = Style2Vec(cnn, gram, image, 'relu4_1')
 --     -- local table = vec
 --     -- vec = cjson.encode(table)
 
 --     -- table = nil
-    
+
 --     -- vecs[i] = vec['relu4_1']
 
 --     -- Let's try saving each vector individually, as opposed to L243 (+13)
 --     torch.save(params.tmp_dir .. label .. '.json', vec, 'ascii')
-    
+
 --     io.write(' Done!\n')
-    
+
 --     ct = ct + 1
 --     if ct > 5 then break end
 --     collectgarbage(); collectgarbage()
@@ -351,14 +352,14 @@ collectgarbage()
 -- for f in paths.iterfiles(params.tmp_dir) do
 --     local table = torch.load(params.tmp_dir .. f, params.cache_format)
 --     t = flatten(table['relu4_1']:double())
-    
+
 --     if tensors then
 --         tensors = torch.cat(tensors, t)
 --     else
 --         tensors = t
 --     end
-        
---     ct = ct + 1    
+
+--     ct = ct + 1
 -- end
 
 -- views = torch.view(tensors, -1, size)
@@ -378,15 +379,15 @@ collectgarbage()
 -- function StyleDistance(x, y, sorted_layers)
 --     -- this function will return the distance from each layer, assuming x and y
 --     -- x["relu2_1 "] = torch.FloatTensor
-    
+
 --     for _, i in ipairs(sorted_layers) do -- can you tell I'm new to Lua?
 --         local distance_vector = CosineSimilarity(x[i]:double(), y[i]:double())
 --         local avg_distance = torch.mean(distance_vector)
-        
+
 --         local msg ='Distance at layer %s is: %f'
 --         print(string.format(msg, i, avg_distance))
 --     end
-    
+
 -- end
 
 
